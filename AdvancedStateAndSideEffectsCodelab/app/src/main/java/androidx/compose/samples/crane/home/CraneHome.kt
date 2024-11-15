@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.BackdropScaffold
 import androidx.compose.material.BackdropValue
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Scaffold
 import androidx.compose.material.rememberBackdropScaffoldState
 import androidx.compose.material.rememberScaffoldState
@@ -28,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.samples.crane.base.CraneDrawer
 import androidx.compose.samples.crane.base.CraneTabBar
@@ -36,7 +36,9 @@ import androidx.compose.samples.crane.base.ExploreSection
 import androidx.compose.samples.crane.data.ExploreModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 typealias OnExploreItemClicked = (ExploreModel) -> Unit
 
@@ -57,18 +59,19 @@ fun CraneHome(
             CraneDrawer()
         }
     ) { padding ->
+        val scope = rememberCoroutineScope()
         CraneHomeContent(
             modifier = modifier.padding(padding),
             onExploreItemClicked = onExploreItemClicked,
             openDrawer = {
-                // TODO Codelab: rememberCoroutineScope step - open the navigation drawer
-                // scaffoldState.drawerState.open()
+                scope.launch {
+                    scaffoldState.drawerState.open()
+                }
             }
         )
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CraneHomeContent(
     onExploreItemClicked: OnExploreItemClicked,
@@ -76,8 +79,7 @@ fun CraneHomeContent(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = viewModel(),
 ) {
-    // TODO Codelab: collectAsStateWithLifecycle step - consume stream of data from the ViewModel
-    val suggestedDestinations: List<ExploreModel> = remember { emptyList() }
+    val suggestedDestinations by viewModel.suggestedDestinations.collectAsStateWithLifecycle()
 
     val onPeopleChanged: (Int) -> Unit = { viewModel.updatePeople(it) }
     var tabSelected by remember { mutableStateOf(CraneScreen.Fly) }
@@ -105,6 +107,7 @@ fun CraneHomeContent(
                         onItemClicked = onExploreItemClicked
                     )
                 }
+
                 CraneScreen.Sleep -> {
                     ExploreSection(
                         title = "Explore Properties by Destination",
@@ -112,6 +115,7 @@ fun CraneHomeContent(
                         onItemClicked = onExploreItemClicked
                     )
                 }
+
                 CraneScreen.Eat -> {
                     ExploreSection(
                         title = "Explore Restaurants by Destination",
@@ -137,9 +141,9 @@ private fun HomeTabBar(
     ) { tabBarModifier ->
         CraneTabs(
             modifier = tabBarModifier,
-            titles = CraneScreen.values().map { it.name },
+            titles = CraneScreen.entries.map { it.name },
             tabSelected = tabSelected,
-            onTabSelected = { newTab -> onTabSelected(CraneScreen.values()[newTab.ordinal]) }
+            onTabSelected = { newTab -> onTabSelected(CraneScreen.entries[newTab.ordinal]) }
         )
     }
 }
@@ -155,9 +159,11 @@ private fun SearchContent(
             onPeopleChanged = onPeopleChanged,
             onToDestinationChanged = { viewModel.toDestinationChanged(it) }
         )
+
         CraneScreen.Sleep -> SleepSearchContent(
             onPeopleChanged = onPeopleChanged
         )
+
         CraneScreen.Eat -> EatSearchContent(
             onPeopleChanged = onPeopleChanged
         )
